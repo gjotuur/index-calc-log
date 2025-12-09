@@ -10,20 +10,20 @@
 #define MAX_EQUATIONS 1500
 #define C_CONSTANT 20
 
-// Структура для алгебраїчної групи
+//Algebraic group
 typedef struct {
     uint64_t module;
     uint64_t generator;
     uint64_t order;
 } AlgebraicGroup;
 
-// Структура для факторної бази
+//Factorbase
 typedef struct {
     uint64_t primes[MAX_FACTOR_BASE];
     int size;
 } FactorBase;
 
-// Структура для системи рівнянь
+//Solve
 typedef struct {
     int64_t **A;
     int64_t *b;
@@ -32,7 +32,7 @@ typedef struct {
 } EquationSystem;
 
 // Функція для швидкого піднесення до степеня за модулем
-uint64_t mod_pow(uint64_t base, uint64_t exp, uint64_t mod) {
+uint64_t ring_mul(uint64_t base, uint64_t exp, uint64_t mod) {
     uint64_t result = 1;
     base %= mod;
     while (exp > 0) {
@@ -45,8 +45,8 @@ uint64_t mod_pow(uint64_t base, uint64_t exp, uint64_t mod) {
     return result;
 }
 
-// Перевірка на простоту (спрощений тест Міллера-Рабіна)
-bool miller_rabin(uint64_t n, uint64_t a) {
+//Different approach - Rabin test
+bool MR_test(uint64_t n, uint64_t a) {
     if (n < 2) return false;
     if (n == 2) return true;
     if (n % 2 == 0) return false;
@@ -58,7 +58,7 @@ bool miller_rabin(uint64_t n, uint64_t a) {
         k++;
     }
     
-    uint64_t x = mod_pow(a, d, n);
+    uint64_t x = ring_mul(a, d, n);
     if (x == 1 || x == n - 1) return true;
     
     for (int i = 0; i < k - 1; i++) {
@@ -68,6 +68,7 @@ bool miller_rabin(uint64_t n, uint64_t a) {
     return false;
 }
 
+//Primeness
 bool is_prime(uint64_t n) {
     if (n < 2) return false;
     if (n == 2 || n == 3) return true;
@@ -77,12 +78,12 @@ bool is_prime(uint64_t n) {
     uint64_t bases[] = {2, 3, 5, 7, 11, 13, 17, 19, 23};
     for (int i = 0; i < 9; i++) {
         if (n == bases[i]) return true;
-        if (!miller_rabin(n, bases[i])) return false;
+        if (!MR_test(n, bases[i])) return false;
     }
     return true;
 }
 
-// НСД
+//GCD, simplistic
 uint64_t gcd(uint64_t a, uint64_t b) {
     while (b) {
         uint64_t t = b;
@@ -92,8 +93,8 @@ uint64_t gcd(uint64_t a, uint64_t b) {
     return a;
 }
 
-// Розширений алгоритм Евкліда для знаходження оберненого за модулем
-int64_t mod_inverse(int64_t a, int64_t m) {
+//EEA, actually
+int64_t ring_inv(int64_t a, int64_t m) {
     int64_t m0 = m, x0 = 0, x1 = 1;
     if (m == 1) return 0;
     
@@ -111,8 +112,8 @@ int64_t mod_inverse(int64_t a, int64_t m) {
     return x1;
 }
 
-// Генерація факторної бази
-void gen_factor_base(uint64_t n, FactorBase *base) {
+//Factorbase generation
+void generate_fb(uint64_t n, FactorBase *base) {
     double log_n = log((double)n);
     double log_log_n = log(log_n);
     int B_lim = (int)(3.38 * exp(0.5 * sqrt(log_n * log_log_n)));
@@ -128,8 +129,8 @@ void gen_factor_base(uint64_t n, FactorBase *base) {
     printf("Factor base size: %d\n", base->size);
 }
 
-// Перевірка на гладкість числа
-bool is_smooth(uint64_t val, FactorBase *base, int *powers) {
+//B-smoothness. again
+bool b_smooth(uint64_t val, FactorBase *base, int *powers) {
     memset(powers, 0, base->size * sizeof(int));
     
     for (int i = 0; i < base->size; i++) {
@@ -142,8 +143,8 @@ bool is_smooth(uint64_t val, FactorBase *base, int *powers) {
     return val == 1;
 }
 
-// Створення системи рівнянь
-bool gen_equations(uint64_t a, uint64_t n, FactorBase *base, EquationSystem *sys) {
+//Generation of equation system
+bool generate_eq(uint64_t a, uint64_t n, FactorBase *base, EquationSystem *sys) {
     clock_t start = clock();
     
     int number_of_eq = base->size + C_CONSTANT;
@@ -163,7 +164,7 @@ bool gen_equations(uint64_t a, uint64_t n, FactorBase *base, EquationSystem *sys
     int *powers = (int*)malloc(base->size * sizeof(int));
     
     while (sys->rows < number_of_eq) {
-        if (is_smooth(curr_val, base, powers)) {
+        if (b_smooth(curr_val, base, powers)) {
             for (int j = 0; j < base->size; j++) {
                 sys->A[sys->rows][j] = powers[j];
             }
@@ -187,8 +188,8 @@ bool gen_equations(uint64_t a, uint64_t n, FactorBase *base, EquationSystem *sys
     return sys->rows >= base->size;
 }
 
-// Розв'язування системи лінійних порівнянь за модулем (метод Гауса)
-void solve_modular_eq(EquationSystem *sys, uint64_t mod, int64_t *solution) {
+//Solve system
+void solve_eq(EquationSystem *sys, uint64_t mod, int64_t *solution) {
     int m = sys->cols;
     int n = sys->rows;
     
@@ -215,7 +216,7 @@ void solve_modular_eq(EquationSystem *sys, uint64_t mod, int64_t *solution) {
                 chosen[i] = true;
                 found = true;
                 
-                int64_t inv = mod_inverse(a_ij, mod);
+                int64_t inv = ring_inv(a_ij, mod);
                 for (int k = 0; k <= m; k++) {
                     A[i][k] = ((__int128_t)A[i][k] * inv) % (int64_t)mod;
                     if (A[i][k] < 0) A[i][k] += mod;
@@ -256,7 +257,7 @@ void solve_modular_eq(EquationSystem *sys, uint64_t mod, int64_t *solution) {
                             A[i][k] /= d;
                         }
                         
-                        int64_t inv = mod_inverse(A[i][j], mod);
+                        int64_t inv = ring_inv(A[i][j], mod);
                         for (int k = 0; k <= m; k++) {
                             A[i][k] = ((__int128_t)A[i][k] * inv) % (int64_t)mod;
                             if (A[i][k] < 0) A[i][k] += mod;
@@ -297,13 +298,13 @@ void solve_modular_eq(EquationSystem *sys, uint64_t mod, int64_t *solution) {
 }
 
 // Знаходження дискретного логарифму
-int64_t find_index(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int64_t *S_idxs) {
+int64_t IC_method(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int64_t *S_idxs) {
     uint64_t curr_ind = 0;
     uint64_t curr_val = beta;
     int *powers = (int*)malloc(base->size * sizeof(int));
     
     for (uint64_t iter = 0; iter < n - 1; iter++) {
-        if (is_smooth(curr_val, base, powers)) {
+        if (b_smooth(curr_val, base, powers)) {
             int64_t corr_a_ind = 0;
             for (int i = 0; i < base->size; i++) {
                 corr_a_ind = (corr_a_ind + (__int128_t)S_idxs[i] * powers[i]) % (n - 1);
@@ -325,25 +326,25 @@ int64_t find_index(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int6
 }
 
 // Головна функція розв'язування
-int64_t solve(uint64_t alpha, uint64_t beta, uint64_t n) {
+int64_t dlog_IC(uint64_t alpha, uint64_t beta, uint64_t n) {
     FactorBase base;
     EquationSystem sys;
     
     printf("Generating factor base...\n");
-    gen_factor_base(n, &base);
+    generate_fb(n, &base);
     
     printf("Generating equations...\n");
-    if (!gen_equations(alpha, n, &base, &sys)) {
+    if (!generate_eq(alpha, n, &base, &sys)) {
         printf("Not enough equations generated!\n");
         return -1;
     }
     
     printf("Solving modular equations...\n");
     int64_t *S_idxs = (int64_t*)malloc(base.size * sizeof(int64_t));
-    solve_modular_eq(&sys, n - 1, S_idxs);
+    solve_eq(&sys, n - 1, S_idxs);
     
     printf("Finding discrete logarithm...\n");
-    int64_t result = find_index(alpha, beta, n, &base, S_idxs);
+    int64_t result = IC_method(alpha, beta, n, &base, S_idxs);
     
     // Очищення пам'яті
     for (int i = 0; i < sys.rows; i++) {
@@ -363,7 +364,7 @@ void init_group(AlgebraicGroup* group, uint64_t module, uint64_t generator) {
 }
 
 int main() {
-    printf("Discrete Logarithm Solver\n");
+    printf("There is no life \n");
     printf("==========================\n\n");
     
     uint64_t a, b, n;
@@ -379,13 +380,13 @@ int main() {
     printf("\n");
     
     clock_t start = clock();
-    int64_t result = solve(a, b, n);
+    int64_t result = dlog_IC(a, b, n);
     clock_t end = clock();
     
     printf("\n==========================\n");
     if (result >= 0) {
         printf("Solution: %lld\n", result);
-        printf("Verification: %llu^%lld ≡ %llu (mod %llu)\n", a, result, mod_pow(a, result, n), n);
+        printf("Verification: %llu^%lld ≡ %llu (mod %llu)\n", a, result, ring_mul(a, result, n), n);
     } else {
         printf("Solution not found!\n");
     }
