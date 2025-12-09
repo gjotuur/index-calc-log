@@ -297,7 +297,7 @@ void solve_eq(EquationSystem *sys, uint64_t mod, int64_t *solution) {
     free(chosen);
 }
 
-// Знаходження дискретного логарифму
+//Index Calculus here boi
 int64_t IC_method(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int64_t *S_idxs) {
     uint64_t curr_ind = 0;
     uint64_t curr_val = beta;
@@ -325,7 +325,7 @@ int64_t IC_method(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int64
     return -1;  // Не знайдено
 }
 
-// Головна функція розв'язування
+//Main
 int64_t dlog_IC(uint64_t alpha, uint64_t beta, uint64_t n) {
     FactorBase base;
     EquationSystem sys;
@@ -357,6 +357,7 @@ int64_t dlog_IC(uint64_t alpha, uint64_t beta, uint64_t n) {
     return result;
 }
 
+//Init Algebraic group
 void init_group(AlgebraicGroup* group, uint64_t module, uint64_t generator) {
     group->generator = generator;
     group->module = module;
