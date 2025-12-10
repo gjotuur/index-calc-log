@@ -31,7 +31,55 @@ typedef struct {
     int cols;
 } EquationSystem;
 
-// Функція для швидкого піднесення до степеня за модулем
+void init_group(AlgebraicGroup* group, uint64_t module, uint64_t generator);                    //From previous
+//Modular arithmetic
+uint64_t ring_mul(uint64_t base, uint64_t exp, uint64_t mod);                                   //mulmod
+int64_t ring_inv(int64_t a, int64_t m);                                                         //inverse mod
+uint64_t gcd(uint64_t a, uint64_t b);                                                           //simplified (no Bezout)
+//Primeness
+bool MR_test(uint64_t n, uint64_t a);                                                           //different approach
+bool primeness(uint64_t n);                                                                     //final primeness func
+//IC algorithm
+void generate_fb(uint64_t n, FactorBase *base);                                                 //factorbase generation
+bool b_smooth(uint64_t val, FactorBase *base, int *powers);                                     //b-smoothness
+bool generate_eq(uint64_t a, uint64_t n, FactorBase *base, EquationSystem *sys);                //equation generator
+void solve_eq(EquationSystem *sys, uint64_t mod, int64_t *solution);                            //equation solver
+int64_t IC_method(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int64_t *S_idxs);    //main func
+
+//here we go
+int main() {
+    printf("There is no life \n");
+    printf("==========================\n\n");
+    
+    uint64_t a, b, n;
+    
+    printf("Enter parameters:\n");
+    printf("Generator (a): ");
+    scanf("%llu", &a);
+    printf("Value (b): ");
+    scanf("%llu", &b);
+    printf("Modulus (n - prime): ");
+    scanf("%llu", &n);
+    
+    printf("\n");
+    
+    clock_t start = clock();
+    int64_t result = dlog_IC(a, b, n);
+    clock_t end = clock();
+    
+    printf("\n==========================\n");
+    if (result >= 0) {
+        printf("Solution: %lld\n", result);
+        printf("Verification: %llu^%lld ≡ %llu (mod %llu)\n", a, result, ring_mul(a, result, n), n);
+    } else {
+        printf("Solution not found!\n");
+    }
+    printf("Total execution time: %.3f seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+    
+    return 0;
+}
+
+//mulmod is mulmod
 uint64_t ring_mul(uint64_t base, uint64_t exp, uint64_t mod) {
     uint64_t result = 1;
     base %= mod;
@@ -69,7 +117,7 @@ bool MR_test(uint64_t n, uint64_t a) {
 }
 
 //Primeness
-bool is_prime(uint64_t n) {
+bool primeness(uint64_t n) {
     if (n < 2) return false;
     if (n == 2 || n == 3) return true;
     if (n % 2 == 0) return false;
@@ -122,7 +170,7 @@ void generate_fb(uint64_t n, FactorBase *base) {
     
     base->size = 0;
     for (int a = 2; a < B_lim && base->size < MAX_FACTOR_BASE; a++) {
-        if (is_prime(a)) {
+        if (primeness(a)) {
             base->primes[base->size++] = a;
         }
     }
@@ -325,7 +373,7 @@ int64_t IC_method(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int64
     return -1;  // Не знайдено
 }
 
-//Main
+//Main func
 int64_t dlog_IC(uint64_t alpha, uint64_t beta, uint64_t n) {
     FactorBase base;
     EquationSystem sys;
@@ -362,36 +410,4 @@ void init_group(AlgebraicGroup* group, uint64_t module, uint64_t generator) {
     group->generator = generator;
     group->module = module;
     group->order = module - 1;
-}
-
-int main() {
-    printf("There is no life \n");
-    printf("==========================\n\n");
-    
-    uint64_t a, b, n;
-    
-    printf("Enter parameters:\n");
-    printf("Generator (a): ");
-    scanf("%llu", &a);
-    printf("Value (b): ");
-    scanf("%llu", &b);
-    printf("Modulus (n - prime): ");
-    scanf("%llu", &n);
-    
-    printf("\n");
-    
-    clock_t start = clock();
-    int64_t result = dlog_IC(a, b, n);
-    clock_t end = clock();
-    
-    printf("\n==========================\n");
-    if (result >= 0) {
-        printf("Solution: %lld\n", result);
-        printf("Verification: %llu^%lld ≡ %llu (mod %llu)\n", a, result, ring_mul(a, result, n), n);
-    } else {
-        printf("Solution not found!\n");
-    }
-    printf("Total execution time: %.3f seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
-    
-    return 0;
 }
