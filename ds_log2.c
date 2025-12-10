@@ -45,6 +45,7 @@ bool b_smooth(uint64_t val, FactorBase *base, int *powers);                     
 bool generate_eq(uint64_t a, uint64_t n, FactorBase *base, EquationSystem *sys);                //equation generator
 void solve_eq(EquationSystem *sys, uint64_t mod, int64_t *solution);                            //equation solver
 int64_t IC_method(uint64_t a, uint64_t beta, uint64_t n, FactorBase *base, int64_t *S_idxs);    //main func
+int64_t dlog_IC(uint64_t alpha, uint64_t beta, uint64_t n);                                      //Final
 
 //here we go
 int main() {
